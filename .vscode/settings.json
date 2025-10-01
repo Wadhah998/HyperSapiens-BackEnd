@@ -1,0 +1,9 @@
+{
+  "eslint.enable": false,
+  "eslint.validate": [],
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "never"
+  },
+  "typescript.preferences.includePackageJsonAutoImports": "off"
+}
+
