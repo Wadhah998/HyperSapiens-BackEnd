@@ -10,7 +10,8 @@ async function bootstrap() {
   const app = await NestFactory.create(ApiGatewayModule);
 
   const expressApp = express(); // Ensure express is callable
-  expressApp.use(express.json());
+  expressApp.use(express.json({ limit: '10mb' }));
+  expressApp.use(express.urlencoded({ extended: true, limit: '10mb' }));
   expressApp.use(cors());
 
   const gateway = new ApolloGateway({

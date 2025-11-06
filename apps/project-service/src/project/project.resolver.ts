@@ -1,4 +1,4 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, ResolveField, Parent } from '@nestjs/graphql';
 import { ProjectService } from './project.service';
 import { CreateProjectInput } from './dto/create-project.input';
 import { UpdateProjectInput } from './dto/update-project.input';
@@ -58,12 +58,47 @@ export class ProjectResolver {
     }
     return this.projectService.findPendingRequests();
   }
+
+  @Query(() => [Project], { name: 'projectsWithCahierCharge' })
+  @UseGuards(GqlAuthGuard)
+  findProjectsWithCahierCharge(@CurrentUser() user: { role: string }) {
+    if (user.role !== 'ADMIN') {
+      throw new Error('Only admins can view projects with cahier charge');
+    }
+    return this.projectService.findProjectsWithCahierCharge();
+  }
   @Mutation(() => Project)
   async acceptOrRejectRequest(
     @Args('id') id: string,
     @Args('decision') decision: boolean,
   ) {
     return this.projectService.acceptOrRejectRequest(id, decision);
+  }
+
+  // 👈 RESOLVER FEDERATION : Récupérer l'ID du propriétaire du projet
+  @ResolveField('ownerId', () => String)
+  async getProjectOwnerId(@Parent() project: Project): Promise<string> {
+    return project.clientId; // clientId contient l'ID de l'utilisateur
+  }
+
+
+  @Mutation(() => Project, { name: 'deleteCahierCharge' })
+  @UseGuards(GqlAuthGuard)
+  async deleteCahierCharge(
+    @Args('projectId') projectId: string,
+    @CurrentUser() user: any,
+  ): Promise<Project> {
+    return this.projectService.deleteCahierCharge(projectId);
+  }
+
+  @Mutation(() => Project, { name: 'updateProjectRefusalReason' })
+  @UseGuards(GqlAuthGuard)
+  async updateProjectRefusalReason(
+    @Args('projectId') projectId: string,
+    @Args('motifRefus') motifRefus: string,
+    @CurrentUser() user: any,
+  ): Promise<Project> {
+    return this.projectService.updateProjectRefusalReason(projectId, motifRefus);
   }
 
 }

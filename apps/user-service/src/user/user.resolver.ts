@@ -1,14 +1,16 @@
-import { Resolver, Query, Mutation, Args, ID, ResolveReference, Directive, Int } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, ID, ResolveReference, Directive, Int, Parent, ResolveField } from '@nestjs/graphql';
 import { UserService } from './user.service';
 
 import { Post, UseGuards } from '@nestjs/common';
 import { User } from './entities/user.entity';
+import { ProjectSummary } from './dto/project-summary.dto';
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
 import { GqlAuthGuard } from '../../../../Libs/shared/gql-auth.guard';
 import { CurrentUser } from '../../../../Libs/shared/current-user.decorator';
 import { JwtService } from '@nestjs/jwt';
 import { EmailService } from '../../../../Libs/shared/EmailService';
+
 import * as bcrypt from 'bcrypt';
 
 
@@ -24,7 +26,6 @@ export class UserResolver {
   @Query(() => User, { name: 'getProfile' })
   @UseGuards(GqlAuthGuard)
   async getProfile(@CurrentUser() user: { sub: string }) {
-    console.log('User in getProfile:', user); // Log the user object
     const fullUser = await this.userService.findOne(Number(user.sub)); // Fetch user details by ID
     if (!fullUser) {
       throw new Error('User not found');
@@ -78,7 +79,6 @@ export class UserResolver {
   @Query(() => [User], { name: 'pendingUsers' })
   @UseGuards(GqlAuthGuard)
   async getPendingUsers(@CurrentUser() user: { role: string }) {
-    console.log((user.role))
     if (user.role !== 'ADMIN') {
       throw new Error('Only admins can view pending user requests');
     }
@@ -134,15 +134,17 @@ export class UserResolver {
       throw new Error('Utilisateur introuvable');
     }
     const hashed = await bcrypt.hash(newPassword, 10);
-    console.log(newPassword)
-    console.log('Hashed password:', hashed);
 
     // 4) Mettre à jour l’utilisateur en base// Log the user ID being updated
     await this.userService.update(userId, { id: userId, password: hashed });
 
     return true;
   }
-
+  // 👈 RESOLVER FEDERATION : Récupérer les projets complets d'un utilisateur
+  @ResolveField('projects', () => [ProjectSummary])
+  async getUserProjects(@Parent() user: User): Promise<ProjectSummary[]> {
+    return this.userService.findUserProjects(user.id);
+  }
 
 
 

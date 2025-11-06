@@ -27,4 +27,20 @@ export class UpdateUserInput  {
   @Field({ nullable: true })
   number?: number;
 
+  // 👈 NOUVEAUX CHAMPS ENTREPRISE
+  @Field({ nullable: true })
+  nomEntreprise?: string;
+
+  @Field({ nullable: true })
+  adresseFacturation?: string;
+
+  @Field({ nullable: true })
+  numTva?: string;
+
+  @Field({ nullable: true })
+  nomComptable?: string;
+
+  @Field({ nullable: true })
+  contact?: string; // Peut être un numéro ou un email
+
 }
