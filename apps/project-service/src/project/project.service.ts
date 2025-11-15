@@ -560,6 +560,61 @@ export class ProjectService {
     }
   }
 
+  async saveCahierChargeAnalysis(projectId: string, analysis: any): Promise<Project> {
+    const session = this.getSession();
+    try {
+      // Vérifier que le projet existe
+      const project = await this.findOne(projectId);
+      if (!project) {
+        throw new NotFoundException(`Project ${projectId} not found`);
+      }
+
+      // Extraire le statut de validation
+      const status = analysis.statutValidation?.split(':')[0]?.trim() || 'UNKNOWN';
+      
+      // Convertir l'objet analysis en JSON string
+      const analysisResultJson = JSON.stringify(analysis);
+      
+      // Date de l'analyse
+      const analysisDate = new Date().toISOString();
+      const updatedAt = new Date().toISOString();
+
+      // Mettre à jour le projet dans Neo4j
+      const result = await session.run(
+        `
+        MATCH (p:Project {id: $projectId})
+        SET p.cahierChargeAnalysisStatus = $status,
+            p.cahierChargeAnalysisResult = $analysisResult,
+            p.cahierChargeAnalysisDate = datetime($analysisDate),
+            p.updatedAt = datetime($updatedAt)
+        RETURN p
+        `,
+        { 
+          projectId, 
+          status,
+          analysisResult: analysisResultJson,
+          analysisDate,
+          updatedAt
+        }
+      );
+
+      if (result.records.length === 0) {
+        throw new Error('Failed to update project with analysis results');
+      }
+
+      const updatedProject = result.records[0].get('p').properties as Project;
+      
+      // Mapper cahierChargeUrl si nécessaire
+      if (updatedProject.cahierChargeUrl && !updatedProject.cahierCharge) {
+        updatedProject.cahierCharge = updatedProject.cahierChargeUrl;
+      }
+
+      return updatedProject;
+    } finally {
+      await session.close();
+    }
+  }
+
   async updateProjectRefusalReason(projectId: string, motifRefus: string): Promise<Project> {
     const session = this.getSession();
     try {

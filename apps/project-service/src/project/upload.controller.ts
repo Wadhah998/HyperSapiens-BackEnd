@@ -1526,4 +1526,252 @@ export class UploadController {
     }
   }
 
+  // 👈 NOUVEAU ENDPOINT : Déclencher l'analyse automatique du cahier de charge
+  @Post(':id/analyze-cahier-charge')
+  async analyzeCahierCharge(
+    @Param('id') projectId: string,
+    @Req() req: any,
+  ) {
+    try {
+      // Récupérer le projet
+      const project = await this.projectService.findOne(projectId);
+      
+      if (!project) {
+        return {
+          success: false,
+          error: 'Projet non trouvé',
+        };
+      }
+
+      if (!project.cahierChargeUrl) {
+        return {
+          success: false,
+          error: 'Aucun cahier de charge trouvé pour ce projet',
+        };
+      }
+
+      // Construire l'URL complète du fichier
+      const baseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
+      const fileUrl = `${baseUrl}${project.cahierChargeUrl}`;
+      
+      // Déterminer le type de fichier
+      const fileExtension = project.cahierChargeFileName?.split('.').pop()?.toLowerCase() || 'pdf';
+      let fileType = 'pdf';
+      if (fileExtension === 'docx' || fileExtension === 'doc') {
+        fileType = 'docx';
+      } else if (fileExtension === 'txt') {
+        fileType = 'txt';
+      }
+
+      // Appeler le webhook n8n
+      // Utiliser l'URL de production par défaut (différente de l'URL de test)
+      const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/analyze-cahier-charge';
+      
+      const response = await fetch(n8nWebhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectId: projectId,
+          fileUrl: fileUrl,
+          fileName: project.cahierChargeFileName || 'cahier-charge',
+          fileType: fileType,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        console.error('Erreur webhook n8n:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: n8nWebhookUrl,
+          error: errorText
+        });
+        throw new Error(`Erreur lors de l'appel au webhook n8n (${response.status}): ${errorText || response.statusText}. Vérifiez que le workflow n8n est actif et que l'URL est correcte.`);
+      }
+
+      // Vérifier si la réponse est vide
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        console.error('Réponse vide du webhook n8n');
+        throw new Error('Le workflow n8n a retourné une réponse vide. Vérifiez la configuration du nœud "Respond to Webhook".');
+      }
+
+      let analysisResult;
+      try {
+        analysisResult = JSON.parse(responseText);
+      } catch (parseError) {
+        throw new Error(`Réponse invalide du workflow n8n: ${responseText.substring(0, 200)}`);
+      }
+
+      // Extraire les données d'analyse de la réponse n8n
+      let analysisData = null;
+      if (analysisResult.analysis) {
+        if (typeof analysisResult.analysis === 'object' && 'analysis' in analysisResult.analysis) {
+          analysisData = analysisResult.analysis.analysis;
+        } else {
+          analysisData = analysisResult.analysis;
+        }
+      } else if (analysisResult.statutValidation || analysisResult.scoreQualite) {
+        analysisData = analysisResult;
+      }
+
+      // Sauvegarder les résultats dans la base de données
+      if (analysisResult.success && analysisData) {
+        await this.projectService.saveCahierChargeAnalysis(
+          projectId,
+          analysisData,
+        );
+      }
+
+      return {
+        success: true,
+        message: 'Analyse du cahier de charge déclenchée avec succès',
+        data: {
+          analysis: analysisData || {},
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'Erreur lors de l\'analyse du cahier de charge',
+      };
+    }
+  }
+
+  // 👈 NOUVEAU ENDPOINT : Analyser un fichier AVANT l'upload (sans sauvegarder)
+  @Post('analyze-cahier-charge-file')
+  @UseInterceptors(FileInterceptor('file'))
+  async analyzeCahierChargeFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('projectId') projectId: string,
+    @Req() req: any,
+  ) {
+    try {
+      if (!file) {
+        return {
+          success: false,
+          error: 'Aucun fichier fourni',
+        };
+      }
+
+      // Convertir le fichier en base64 pour l'envoyer à n8n
+      const fileBuffer = file.buffer;
+      const base64File = fileBuffer.toString('base64');
+      
+      // Déterminer le type de fichier
+      const fileExtension = file.originalname?.split('.').pop()?.toLowerCase() || 'pdf';
+      let fileType = 'pdf';
+      if (fileExtension === 'docx' || fileExtension === 'doc') {
+        fileType = 'docx';
+      } else if (fileExtension === 'txt') {
+        fileType = 'txt';
+      }
+
+      // Appeler le webhook n8n avec le fichier en base64
+      // Utiliser l'URL de production par défaut (différente de l'URL de test)
+      const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/analyze-cahier-charge';
+      
+      const requestBody = {
+        projectId: projectId || 'temp',
+        fileName: file.originalname || 'cahier-charge',
+        fileType: fileType,
+        fileData: base64File, // Fichier en base64
+        mimeType: file.mimetype,
+      };
+      
+      const response = await fetch(n8nWebhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        console.error('Erreur webhook n8n:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: n8nWebhookUrl,
+          error: errorText
+        });
+        throw new Error(`Erreur lors de l'appel au webhook n8n (${response.status}): ${errorText || response.statusText}. Vérifiez que le workflow n8n est actif et que l'URL est correcte.`);
+      }
+
+      // Vérifier si la réponse est vide
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        console.error('Réponse vide du webhook n8n');
+        throw new Error('Le workflow n8n a retourné une réponse vide. Vérifiez la configuration du nœud "Respond to Webhook".');
+      }
+
+      let analysisResult;
+      try {
+        analysisResult = JSON.parse(responseText);
+      } catch (parseError) {
+        throw new Error(`Réponse invalide du workflow n8n: ${responseText.substring(0, 200)}`);
+      }
+
+      // Extraire les données d'analyse de la réponse n8n
+      // n8n peut retourner les données dans analysis.analysis ou directement dans analysis
+      let analysisData = null;
+      if (analysisResult.analysis) {
+        // Si les données sont dans analysis.analysis (structure imbriquée)
+        if (typeof analysisResult.analysis === 'object' && 'analysis' in analysisResult.analysis) {
+          analysisData = analysisResult.analysis.analysis;
+        } else {
+          // Si les données sont directement dans analysis
+          analysisData = analysisResult.analysis;
+        }
+      } else if (analysisResult.statutValidation || analysisResult.scoreQualite) {
+        // Si les données sont à la racine de la réponse
+        analysisData = analysisResult;
+      }
+
+      // Retourner les résultats SANS sauvegarder
+      return {
+        success: true,
+        message: 'Analyse du cahier de charge terminée',
+        data: {
+          analysis: analysisData || {},
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'Erreur lors de l\'analyse du cahier de charge',
+      };
+    }
+  }
+
+  // 👈 NOUVEAU ENDPOINT : Recevoir les résultats de l'analyse depuis n8n (webhook callback)
+  @Post('webhook/cahier-charge-analysis-result')
+  async receiveAnalysisResult(@Body() body: any) {
+    try {
+      const { projectId, analysis } = body;
+
+      if (!projectId || !analysis) {
+        return {
+          success: false,
+          error: 'Données manquantes: projectId et analysis sont requis',
+        };
+      }
+
+      // Sauvegarder les résultats
+      await this.projectService.saveCahierChargeAnalysis(projectId, analysis);
+
+      return {
+        success: true,
+        message: 'Résultats de l\'analyse sauvegardés avec succès',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'Erreur lors de la sauvegarde des résultats',
+      };
+    }
+  }
+
 }

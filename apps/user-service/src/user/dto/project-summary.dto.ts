@@ -49,7 +49,26 @@ export class ProjectSummary {
   cahierCharge?: string;
 
   @Field({ nullable: true })
+  cahierChargeUrl?: string;
+
+  @Field({ nullable: true })
   cahierChargeFileName?: string;
+
+  @Field({ nullable: true })
+  cahierChargeMimeType?: string;
+
+  @Field({ nullable: true })
+  cahierChargeSize?: number;
+
+  // 👈 RÉSULTATS DE L'ANALYSE AUTOMATIQUE DU CAHIER DE CHARGE
+  @Field({ nullable: true })
+  cahierChargeAnalysisStatus?: string; // VALIDE, INCOMPLET, NON_CONFORME, INVALIDE
+
+  @Field({ nullable: true })
+  cahierChargeAnalysisResult?: string; // JSON string contenant tous les résultats de l'analyse
+
+  @Field({ nullable: true })
+  cahierChargeAnalysisDate?: string; // Date de l'analyse
 
   @Field({ nullable: true })
   lastUpdatedById?: string;
