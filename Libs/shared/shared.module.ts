@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtModule } from '@nestjs/jwt';
+import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
 import { SharedService } from './shared.service';
 import { GqlAuthGuard } from './gql-auth.guard';
 import { EmailService } from './EmailService';
@@ -14,7 +14,7 @@ import { EmailService } from './EmailService';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => {
+      useFactory: async (configService: ConfigService): Promise<JwtModuleOptions> => {
         const secret = configService.get<string>('JWT_SECRET');
         console.log('JWT_SECRET:', configService.get<string>('JWT_SECRET'));
         if (!secret) {
@@ -23,7 +23,7 @@ import { EmailService } from './EmailService';
         return {
           secret,
           signOptions: { expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '1d' },
-        };
+        } as JwtModuleOptions;
       },
     }),
   ],
