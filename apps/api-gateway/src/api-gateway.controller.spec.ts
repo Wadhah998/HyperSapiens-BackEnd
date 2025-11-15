@@ -15,8 +15,8 @@ describe('ApiGatewayController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(apiGatewayController.getHello()).toBe('Hello World!');
+    it('should return API Gateway message', () => {
+      expect(apiGatewayController.getHello()).toBe('Request handled by API Gateway and forwarded to the appropriate microservice.');
     });
   });
 });
