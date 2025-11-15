@@ -8,13 +8,13 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install yarn
-RUN npm install -g yarn
+# Enable corepack and use yarn 1.22.22 (same as local)
+RUN corepack enable && corepack prepare yarn@1.22.22 --activate
 
 # Copy package files
 COPY package.json yarn.lock* ./
 
-# Install dependencies
+# Install dependencies (using --frozen-lockfile for yarn 1.x)
 RUN yarn install --frozen-lockfile
 
 # Copy source code
@@ -28,18 +28,13 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Install yarn
-RUN npm install -g yarn
-
-# Copy package files
-COPY package.json yarn.lock* ./
-
-# Install only production dependencies
-RUN yarn install --frozen-lockfile --production
+# Enable corepack and use yarn 1.22.22 (same as local)
+RUN corepack enable && corepack prepare yarn@1.22.22 --activate
 
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 
 # Expose port (will be overridden by the service)
 EXPOSE 3000
