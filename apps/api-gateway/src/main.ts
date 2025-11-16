@@ -14,13 +14,21 @@ async function bootstrap() {
   expressApp.use(express.urlencoded({ extended: true, limit: '10mb' }));
   expressApp.use(cors());
 
+  // Configuration des URLs des services via variables d'environnement
+  // Par défaut, utilise localhost pour le développement local
+  // Dans Docker, utilisez les noms de services Docker
+  const userServiceUrl = process.env.USER_SERVICE_URL || 'http://localhost:3001/graphql';
+  const authServiceUrl = process.env.AUTH_SERVICE_URL || 'http://localhost:3002/graphql';
+  const projectServiceUrl = process.env.PROJECT_SERVICE_URL || 'http://localhost:3003/graphql';
+  const hyperdevServiceUrl = process.env.HYPERDEV_SERVICE_URL || 'http://localhost:3004/graphql';
+
   const gateway = new ApolloGateway({
     supergraphSdl: new IntrospectAndCompose({
       subgraphs: [
-        { name: 'user-service', url: 'http://localhost:3001/graphql' },
-        { name: 'auth-service', url: 'http://localhost:3002/graphql' },
-        { name: 'project-service', url: 'http://localhost:3003/graphql' },
-        { name: 'hyperdev-service', url: 'http://localhost:3004/graphql' },
+        { name: 'user-service', url: userServiceUrl },
+        { name: 'auth-service', url: authServiceUrl },
+        { name: 'project-service', url: projectServiceUrl },
+        { name: 'hyperdev-service', url: hyperdevServiceUrl },
       ],
     }),
     buildService({ url }) {
