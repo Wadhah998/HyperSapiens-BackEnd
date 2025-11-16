@@ -8,8 +8,12 @@ export class AuthService {
   private client: ApolloClient<any>;
 
   constructor(private configService: ConfigService) {
+    // Utiliser une variable d'environnement pour l'URL du user-service
+    // Par défaut, utilise localhost pour le développement local
+    // Dans Docker, utilisez le nom du service Docker
+    const userServiceUrl = process.env.USER_SERVICE_URL || 'http://localhost:3001/graphql';
     this.client = new ApolloClient({
-      uri: 'http://localhost:3001/graphql', // URL de user-service
+      uri: userServiceUrl,
       cache: new InMemoryCache(),
     });
   }

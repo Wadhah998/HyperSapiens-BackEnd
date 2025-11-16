@@ -103,7 +103,9 @@ export class UserResolver {
     );
 
     // 3) Montage du lien de reset (le frontend/le client devra le traiter)
-    const resetUrl = `'http://localhost:5173/set-password?token=${resetToken}`;
+    // Utiliser une variable d'environnement pour l'URL du frontend
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetUrl = `${frontendUrl}/set-password?token=${resetToken}`;
 
     // 4) Envoi de l’email via le service partagé
     await this.emailService.sendEmail(
