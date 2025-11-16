@@ -43,8 +43,9 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
-# Expose port (will be overridden by the service)
-EXPOSE 3000
+# Expose all possible ports for microservices
+# api-gateway: 3000, user-service: 3001, auth-service: 3002, project-service: 3003, hyperdev-service: 3004
+EXPOSE 3000 3001 3002 3003 3004
 
 # Set the service name as environment variable
 ARG SERVICE_NAME=api-gateway
