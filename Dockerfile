@@ -20,8 +20,12 @@ RUN yarn install --frozen-lockfile
 # Copy source code
 COPY . .
 
-# Build all microservices (NestJS monorepo builds all, we'll use only the one we need)
-RUN yarn build
+# Build all microservices individually (NestJS monorepo with webpack needs individual builds)
+RUN yarn nest build api-gateway && \
+    yarn nest build user-service && \
+    yarn nest build auth-service && \
+    yarn nest build project-service && \
+    yarn nest build hyperdev-service
 
 # Stage 2: Production
 FROM node:20-alpine AS production
