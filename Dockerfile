@@ -17,8 +17,8 @@ COPY package.json yarn.lock* ./
 # Install dependencies (using --frozen-lockfile for yarn 1.x)
 RUN yarn install --frozen-lockfile
 
-# Install missing peer dependencies (graphql and uuid)
-RUN yarn add graphql@^16.8.1 uuid@^9.0.1 --ignore-workspace-root-check
+# Install missing peer dependencies (graphql, uuid, and passport)
+RUN yarn add graphql@^16.8.1 uuid@^9.0.1 passport@^0.7.0 --ignore-workspace-root-check
 
 # Copy source code
 COPY . .
