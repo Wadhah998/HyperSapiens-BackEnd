@@ -153,11 +153,28 @@ services:
     networks:
       - hyper-sapiens-network
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/graphql', (r) => {process.exit(r.statusCode === 200 || r.statusCode === 400 ? 0 : 1)})\""]
+      test: ["CMD-SHELL", "node -e \"const http=require('http');const req=http.get('http://localhost:3000/graphql',(r)=>{r.resume();r.on('end',()=>process.exit(0));});req.on('error',(e)=>{console.error(e);process.exit(1);});setTimeout(()=>process.exit(1),5000);\""]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  # Frontend
+  frontend:
+    image: wadhahdaoud/hyper-sapiens-frontend:latest
+    container_name: hyper-sapiens-frontend
+    ports:
+      - "5174:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - hyper-sapiens-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://127.0.0.1:80 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 networks:
   hyper-sapiens-network:
