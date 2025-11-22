@@ -15,10 +15,18 @@ RUN corepack enable && corepack prepare yarn@1.22.22 --activate
 COPY package.json yarn.lock* ./
 
 # Install dependencies (using --frozen-lockfile for yarn 1.x)
-RUN yarn install --frozen-lockfile
+# Retry up to 3 times in case of network errors
+RUN for i in 1 2 3; do \
+        yarn install --frozen-lockfile && break || \
+        (echo "Attempt $i failed, retrying..." && sleep 5); \
+    done
 
 # Install missing peer dependencies (graphql, uuid, and passport)
-RUN yarn add graphql@^16.8.1 uuid@^9.0.1 passport@^0.7.0 --ignore-workspace-root-check
+# Retry up to 3 times in case of network errors
+RUN for i in 1 2 3; do \
+        yarn add graphql@^16.8.1 uuid@^9.0.1 passport@^0.7.0 --ignore-workspace-root-check && break || \
+        (echo "Attempt $i failed, retrying..." && sleep 5); \
+    done
 
 # Copy source code
 COPY . .
