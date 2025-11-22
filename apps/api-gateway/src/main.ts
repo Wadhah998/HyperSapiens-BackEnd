@@ -5,6 +5,7 @@ import { expressMiddleware } from '@apollo/server/express4';
 import express from 'express';
 import { ApiGatewayModule } from './api-gateway.module';
 import cors from 'cors';
+import { PrometheusService } from '../../../../Libs/shared/prometheus.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(ApiGatewayModule);
@@ -58,9 +59,24 @@ async function bootstrap() {
     })
   );
 
+  // Route pour les métriques Prometheus
+  expressApp.get('/metrics', async (req, res) => {
+    try {
+      const prometheusService = app.get(PrometheusService);
+      const metrics = await prometheusService.getMetrics();
+      res.set('Content-Type', 'text/plain');
+      res.send(metrics);
+    } catch (error) {
+      // Si Prometheus n'est pas disponible, retourner des métriques vides
+      res.set('Content-Type', 'text/plain');
+      res.send('# Prometheus metrics not available\n');
+    }
+  });
+
   const gatewayPort = 3000;
   expressApp.listen(gatewayPort, () => {
     console.log(`🚀 Gateway ready at http://localhost:${gatewayPort}/graphql`);
+    console.log(`📊 Metrics available at http://localhost:${gatewayPort}/metrics`);
   });
 }
 

@@ -1,0 +1,87 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'hyper-sapiens-monitor'
+
+# Configuration des alertes (optionnel pour plus tard)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: []
+
+# Règles d'alertes (optionnel pour plus tard)
+# rule_files:
+#   - "alert_rules.yml"
+
+# Configuration des cibles à scraper
+scrape_configs:
+  # Prometheus lui-même
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter - Métriques système
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          instance: 'vps-server'
+
+  # cAdvisor - Métriques des conteneurs Docker
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          instance: 'docker-containers'
+
+  # API Gateway
+  - job_name: 'api-gateway'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['api-gateway:3000']
+        labels:
+          service: 'api-gateway'
+          environment: 'production'
+
+  # User Service
+  - job_name: 'user-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['user-service:3001']
+        labels:
+          service: 'user-service'
+          environment: 'production'
+
+  # Auth Service
+  - job_name: 'auth-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['auth-service:3002']
+        labels:
+          service: 'auth-service'
+          environment: 'production'
+
+  # Project Service
+  - job_name: 'project-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['project-service:3003']
+        labels:
+          service: 'project-service'
+          environment: 'production'
+
+  # Hyperdev Service
+  - job_name: 'hyperdev-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['hyperdev-service:3004']
+        labels:
+          service: 'hyperdev-service'
+          environment: 'production'
+
+  # Neo4j Exporter (si vous voulez monitorer Neo4j plus tard)
+  # - job_name: 'neo4j'
+  #   static_configs:
+  #     - targets: ['neo4j-exporter:9204']
+

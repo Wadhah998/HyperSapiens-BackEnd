@@ -1,9 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { SharedService } from './shared.service';
 import { GqlAuthGuard } from './gql-auth.guard';
 import { EmailService } from './EmailService';
+import { PrometheusModule } from './prometheus.module';
+import { PrometheusController } from './prometheus.controller';
+import { PrometheusInterceptor } from './prometheus.interceptor';
 
 @Module({
   imports: [
@@ -26,8 +30,18 @@ import { EmailService } from './EmailService';
         } as JwtModuleOptions;
       },
     }),
+    PrometheusModule,
   ],
-  providers: [SharedService, GqlAuthGuard, EmailService],
-  exports: [SharedService, GqlAuthGuard, JwtModule , EmailService],
+  controllers: [PrometheusController],
+  providers: [
+    SharedService,
+    GqlAuthGuard,
+    EmailService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: PrometheusInterceptor,
+    },
+  ],
+  exports: [SharedService, GqlAuthGuard, JwtModule, EmailService, PrometheusModule],
 })
 export class SharedModule {}
