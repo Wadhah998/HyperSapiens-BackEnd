@@ -5,7 +5,8 @@ import { expressMiddleware } from '@apollo/server/express4';
 import express from 'express';
 import { ApiGatewayModule } from './api-gateway.module';
 import cors from 'cors';
-import { PrometheusService } from '../../../../Libs/shared/prometheus.service';
+import { PrometheusService } from 'Libs/shared/prometheus.service';
+
 
 async function bootstrap() {
   const app = await NestFactory.create(ApiGatewayModule);
