@@ -25,7 +25,15 @@ export class PrometheusInterceptor implements NestInterceptor {
       const serviceName = process.env.SERVICE_NAME || 'unknown-service';
       
       // Détecter si c'est une requête GraphQL
-      const isGraphQL = context.getType() === 'graphql' || request.url?.includes('/graphql');
+      // On essaie de créer un GqlExecutionContext, si ça fonctionne c'est GraphQL
+      let isGraphQL = false;
+      try {
+        const gqlContext = GqlExecutionContext.create(context);
+        isGraphQL = !!gqlContext.getInfo();
+      } catch {
+        // Si on ne peut pas créer GqlExecutionContext, ce n'est pas GraphQL
+        isGraphQL = request.url?.includes('/graphql') || false;
+      }
       
       if (isGraphQL) {
         return this.interceptGraphQL(context, next, serviceName);
